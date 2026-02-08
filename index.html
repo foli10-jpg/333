@@ -43,7 +43,7 @@ button:disabled{opacity:.6;cursor:not-allowed;}
     <h2>🎰 777 </h2>
     <div class="info">
         <div>💰 Binance: <span id="balance">10.00</span>€</div>
-        <div>🎯 Bet: <span id="bet">0.50</span>€</div>
+        <div>🎯 Bet: <span id="bet">0.20</span>€</div>
     </div>
     <div class="slot-container">
         <div class="pointer"></div>
@@ -62,7 +62,7 @@ button:disabled{opacity:.6;cursor:not-allowed;}
 
 <script>
 // SIMBOLET DHE FITIMET
-const symbols = ["?","!","?","!","?","!","?","!","?"];
+const symbols = ["?","!","?","!","?","!","?","!","!"];
 const payouts = {"0€":0,"0.20":1,"0.50":1,"1.00":4,"2.00":4}; 
 const reels = [document.getElementById("reel1"),document.getElementById("reel2"),document.getElementById("reel3")];
 const resultEl = document.getElementById("result");
@@ -71,7 +71,7 @@ const betEl = document.getElementById("bet");
 const btn = document.getElementById("spinBtn");
 
 let balance = 10.00;
-let bet = 0.50;
+let bet = 0.20;
 const totalBoxes = 15;
 
 // FUNKSIONI PËR KRIJU KATRORËT + KOPJE PËR EFTEKT INFINIT
