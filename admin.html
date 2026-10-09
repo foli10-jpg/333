@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="sq"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Big Chat · Admin</title>
+<style>
+:root{--bg:#1b1236;--panel:#2a1e52;--line:#41317a;--text:#f4f0ff;--mute:#a99fd0;--pink:#ff4d94;--gold:#ffc53d;--teal:#3ee6c4}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.4 system-ui,sans-serif;padding:1rem;max-width:1200px;margin:auto}
+button,input{font:inherit;color:inherit}button{cursor:pointer;border:0;border-radius:8px;padding:.4em .8em;background:var(--line);font-weight:600}
+button.p{background:var(--pink)}button.g{background:var(--gold);color:#2b1d00}button.t{background:var(--teal);color:#06231d}
+input{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:.5em .7em}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.8rem;margin:1rem 0}
+.card{background:var(--panel);border-radius:14px;padding:1rem}.card b{display:block;font-size:1.8rem}.card span{color:var(--mute)}
+.wrap{overflow-x:auto;background:var(--panel);border-radius:14px;padding:.5rem}table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:.5rem;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--mute);font-weight:600}
+.on{color:var(--teal)}.off{color:var(--mute)}.ban{color:var(--pink)}
+.rep{display:flex;gap:1rem;background:var(--panel);border-radius:14px;padding:.8rem;margin-bottom:.7rem;align-items:center;flex-wrap:wrap}
+.rep img{width:160px;border-radius:8px;background:#000}.rep div{flex:1;min-width:200px}
+.hidden{display:none}#login{max-width:340px;margin:20vh auto;display:grid;gap:.6rem}
+</style></head><body>
+<form id="login"><h2>Admin · Big Chat</h2><input id="em" type="email" placeholder="Email" required><input id="pw" type="password" placeholder="Fjalëkalimi" required><button class="p">Hyr</button><div id="le" style="color:var(--pink)"></div></form>
+<div id="app" class="hidden">
+  <h2 style="margin:0">Admin Dashboard</h2>
+  <div class="cards" id="cards"></div>
+  <h3>Raportimet e hapura</h3><div id="reports"></div>
+  <h3>Përdoruesit</h3><p><input id="q" placeholder="Kërko username ose email…" style="width:min(380px,100%)"></p>
+  <div class="wrap"><table><thead><tr><th>Username</th><th>Email</th><th>Statusi</th><th>Coins</th><th>VIP</th><th>Raporte</th><th>Veprime</th></tr></thead><tbody id="rows"></tbody></table></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);let token=localStorage.getItem('bc_token');
+const api=async(u,b)=>{const r=await fetch(u,{method:b?'POST':'GET',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:b?JSON.stringify(b):undefined});if(!r.ok)throw new Error(r.status);return r.json()};
+$('login').onsubmit=async e=>{e.preventDefault();try{const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('em').value,password:$('pw').value})});const d=await r.json();if(!r.ok)throw 0;token=d.token;localStorage.setItem('bc_token',token);start()}catch{$('le').textContent='Hyrja dështoi'}};
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function load(){
+  const [s,u,r]=await Promise.all([api('/api/admin/stats'),api('/api/admin/users?q='+encodeURIComponent($('q').value)),api('/api/admin/reports')]);
+  $('cards').innerHTML=[['Total Users',s.users],['Online Now',s.online],['Banned',s.banned],['Raporte të hapura',s.openReports],['Revenue','€'+s.revenue.toFixed(2)]].map(([a,b])=>`<div class="card"><b>${b}</b><span>${a}</span></div>`).join('');
+  $('rows').innerHTML=u.map(x=>`<tr><td>${esc(x.username)} ${x.role==='admin'?'★':''}</td><td>${esc(x.email)}</td>
+  <td class="${x.banned?'ban':x.status==='Offline'?'off':'on'}">${x.banned?'BANNED':x.status}</td><td>${x.coins}</td><td>${x.isVip?'VIP':'-'}</td><td>${x.reports}</td>
+  <td>${x.banned?`<button class="t" onclick="ban('${x.id}',false)">Unban</button>`:`<button class="p" onclick="ban('${x.id}',true)">Ban</button>`}
+  <button class="g" onclick="coins('${x.id}')">+Coins</button> <button onclick="vip('${x.id}')">VIP</button></td></tr>`).join('');
+  $('reports').innerHTML=r.length?r.map(x=>`<div class="rep">${x.snapshot?`<img src="${esc(x.snapshot)}" alt="snapshot">`:''}<div><b>${esc(x.reported?.username)}</b> raportuar nga ${esc(x.reporter?.username)}<br><span style="color:var(--mute)">${esc(x.reason)} · ${new Date(x.createdAt).toLocaleString()}</span></div>
+  <button class="p" onclick="res('${x._id}',true,24)">Ban 24h</button><button class="p" onclick="res('${x._id}',true,0)">Ban i përhershëm</button><button onclick="res('${x._id}',false)">Injoro</button></div>`).join(''):'<p style="color:var(--mute)">Asnjë raportim i hapur.</p>';
+}
+async function ban(id,b){if(b){const h=prompt('Sa orë? (0 = i përhershëm)','24');if(h===null)return;const reason=prompt('Arsyeja','Shkelje e rregullave');await api('/api/admin/toggle-ban',{userId:id,isBanned:true,hours:h,reason})}else await api('/api/admin/toggle-ban',{userId:id,isBanned:false});load()}
+async function coins(id){const n=prompt('Sa coins? (negativ për zbritje)','100');if(n)await api('/api/admin/add-coins',{userId:id,coinsToAdd:n});load()}
+async function vip(id){const d=prompt('Sa ditë VIP? (0 = hiqe)','30');if(d!==null)await api('/api/admin/set-vip',{userId:id,days:d});load()}
+async function res(id,b,h){await api('/api/admin/reports/'+id+'/resolve',{ban:b,hours:h});load()}
+$('q').oninput=()=>load();
+async function start(){try{await api('/api/admin/stats')}catch{localStorage.removeItem('bc_token');$('login').classList.remove('hidden');$('app').classList.add('hidden');return}
+ $('login').classList.add('hidden');$('app').classList.remove('hidden');load();setInterval(load,8000)}
+if(token)start();
+</script></body></html>
+
